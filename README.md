@@ -27,7 +27,7 @@ Next set this project up with:
 
 Now copy the required files to this service:
 ~~~
- $ mkdir ./data/certs
+ $ mkdir -p ./data/certs
  $ cp /really-secure-directory/factory_ca.pem ./data/certs/
  $ cp /really-secure-directory/local_ca.pem ./data/certs/
  $ cp /really-secure-directory/local_ca.key ./data/certs/
