@@ -41,6 +41,7 @@ def _mk_config():
                     [
                         ("type", '"ostree+compose_apps"'),
                         ("ostree_server", '"{gateway_server}/treehub"'),
+                        ("compose_apps_root", '"{sota_config_dir}/compose-apps"'),
                     ]
                 ),
             ),
@@ -83,7 +84,7 @@ def sota_toml_fmt(overrides=None, sota_config_dir="/var/sota", hardware_id=""):
                 v = v.format(
                     gateway_server=Settings.DEVICE_GATEWAY_SERVER,
                     sota_config_dir=sota_config_dir,
-                    hardware_id=hardware_id,
+                    hardware_id=hardware_id
                 )
                 ret.append("{} = {}".format(k, v))
         ret.append("")
