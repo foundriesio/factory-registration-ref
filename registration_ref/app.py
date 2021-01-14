@@ -34,6 +34,7 @@ def sign_csr():
 
     overrides = data.get("overrides") or {}
     sota_config_dir = data.get("sota-config-dir") or "/var/sota"
+    hardware_id = data.get("hardware-id")
 
     try:
         fields = sign_device_csr(csr)
@@ -46,7 +47,7 @@ def sign_csr():
         jsonify(
             {
                 "root.crt": fields.root_crt,
-                "sota.toml": sota_toml_fmt(overrides, sota_config_dir),
+                "sota.toml": sota_toml_fmt(overrides, sota_config_dir, hardware_id),
                 "client.pem": fields.client_crt,
             },
         ),
