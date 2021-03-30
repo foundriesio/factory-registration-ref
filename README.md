@@ -38,6 +38,14 @@ Now copy the required files to this service:
  chmod +r ./data/certs/*
 ~~~
 
+You can optionally copy a Foundries.io API token (scope `devices:create`) so
+that devices can be defined/configured before the certificate is returned back
+to the device. This can be used for setting up device-groups and config so
+that a device's first boot will include the proper configuration:
+~~~
+  # echo <TOKEN> > ./data/fio-api-token
+~~~
+
 You can now run this API with:
 ~~~
  $ docker-compose up

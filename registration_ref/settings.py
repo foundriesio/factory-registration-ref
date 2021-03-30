@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 
 def _env(name: str) -> str:
@@ -38,3 +39,16 @@ class Settings:
     @staticmethod
     def DEVICES_DIR() -> str:
         return _env("DEVICES_DIR")
+
+    @class_property  # type: ignore
+    @staticmethod
+    def DEVICE_GROUP() -> str:
+        return _env("DEVICE_GROUP")
+
+    @class_property  # type: ignore
+    @staticmethod
+    def API_TOKEN_PATH() -> Optional[str]:
+        p = os.environ.get("FIO_API_TOKEN")
+        if p and os.path.isfile(p):
+            return p
+        return None
