@@ -20,9 +20,10 @@ class Options(NamedTuple):
     uuid: str
     name: str
     registration_url: str
+    production: bool
 
 
-def create_key(uuid: str, factory: str) -> Tuple[bytes, bytes]:
+def create_key(uuid: str, factory: str, production: bool) -> Tuple[bytes, bytes]:
     key = subprocess.check_output(
         ["openssl", "ecparam", "-genkey", "-name", "prime256v1"]
     )
@@ -37,11 +38,16 @@ req_extensions = ext
 [dn]
 CN={uuid}
 OU={factory}
-
+""".encode()
+        )
+        if production:
+            cnf.write(b"businessCategory=production\n")
+        cnf.write(
+            b"""
 [ext]
 keyUsage=critical, digitalSignature
 extendedKeyUsage=critical, clientAuth
-""".encode()
+"""
         )
         cnf.flush()
 
@@ -56,7 +62,7 @@ extendedKeyUsage=critical, clientAuth
 
 
 def main(opts: Options):
-    pkey, csr = create_key(opts.uuid, opts.factory)
+    pkey, csr = create_key(opts.uuid, opts.factory, opts.production)
     data = {
         "name": opts.name,
         "uuid": opts.uuid,
@@ -96,10 +102,11 @@ curl --cert client.pem --key pkey.pem --cacert root.crt $*""".encode()
 
 
 def get_parser() -> ArgumentParser:
-    p = ArgumentParser(description="Example client to foundries.io intel esh api")
+    p = ArgumentParser(description="Example client to ease local testing")
     p.add_argument(
         "--factory", "-f", required=True, help="Name of factory to register device in"
     )
+    p.add_argument("--production", action="store_true", help="Make 'production' cert")
     p.add_argument("--sota-dir", "-d", default="/var/sota", help="default=%(default)s")
     p.add_argument("--tags", "-t", default="master", help="default=%(default)s")
     p.add_argument("--apps", "-a")
@@ -134,5 +141,6 @@ if __name__ == "__main__":
         uuid=args.uuid,
         name=args.name,
         registration_url=args.registration_url,
+        production=args.production,
     )
     main(options)

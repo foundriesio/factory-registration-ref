@@ -6,9 +6,13 @@ services:
     environment:
       DEVICES_DIR: /devices
       CERTS_DIR: /certs
+      FIO_API_TOKEN: /fio-api-token
+      # if FIO_API_TOKEN is provided, assign devices to a device-group
+      DEVICE_GROUP: ${DEVICE_GROUP-}
     volumes:
       - ${DATA_DIR-./data}/devices:/devices
       - ${DATA_DIR-./data}/certs:/certs:ro
+      - ${DATA_DIR-./data}/fio-api-token:/fio-api-token:ro
     ports:
       - ${API_PORT-80}:8000
     restart: always

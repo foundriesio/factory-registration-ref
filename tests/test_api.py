@@ -52,6 +52,7 @@ class TestApi(TestCase):
         with TemporaryDirectory() as d:
             with patch("registration_ref.app.Settings") as settings:
                 settings.DEVICES_DIR = d
+                settings.API_TOKEN_PATH = None
                 r = self._sign({"csr": "n/a", "overrides": overrides})
                 with open(os.path.join(d, "uuid")) as f:
                     self.assertEqual("pub", f.read())
