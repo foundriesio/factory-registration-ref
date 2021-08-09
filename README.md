@@ -53,7 +53,7 @@ You can now run this API with:
 
 From an LmP device:
 ~~~
- $ DEVICE_API=http://<IP of docker-compose host>/sign lmp-device-register
+ $ DEVICE_API=http://<IP of docker-compose host>/sign lmp-device-register [-T <TOKEN>]
 ~~~
 
 # Testing/Troubleshooting
