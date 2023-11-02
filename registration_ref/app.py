@@ -9,21 +9,31 @@ from registration_ref.crypto import sign_device_csr
 from registration_ref.sota_toml import sota_toml_fmt
 from registration_ref.settings import Settings
 
+import logging
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.DEBUG)
+log = logging.getLogger(__name__)
+
 app = Flask(__name__)
 
 
 @app.before_request
 def _auth_user():
+    log.debug("Received request from client IP: %s", request.remote_addr)
+    # Add further authentication checks and log if required
     pass
-
 
 def log_device(uuid: str, pubkey: str):
     # Keep a log of created devices
+    log.debug("Logging device with UUID: %s, pubkey: %s", uuid, pubkey)
     with open(os.path.join(Settings.DEVICES_DIR, uuid), "w") as f:
         f.write(pubkey)
 
 
 def create_in_foundries(client_cert: str, api_token: str, name: Optional[str] = None):
+    log.info("Initiating device creation in foundries")
+
     data = {
         "client.pem": client_cert,
     }
@@ -40,32 +50,40 @@ def create_in_foundries(client_cert: str, api_token: str, name: Optional[str] = 
             "https://api.foundries.io/ota/devices/", headers=headers, json=data
         )
         if r.status_code == 409:
+            log.error("Device creation conflict detected: %s", r.text)
             abort(409, description=r.text)
         if r.ok:
+            log.info("Device successfully created in foundries")
             return
-        msg = f"Unable to create device on server: HTTP_{r.status_code} - {r.text}"
-        app.logger.error(msg)
+        log.error("Unable to create device on server: HTTP_%s - %s", r.status_code, r.text)
         if x:
-            app.logger.info("Trying again in %ds", x)
+            log.info("Retrying device creation in %ds", x)
             sleep(x)
         else:
+            log.error("Failed to create device after retries. Aborting!")
             abort(500, description=msg)
 
 
 @app.route("/sign", methods=["POST"])
 def sign_csr():
+    log.info("Received CSR signing request")
+
     data = request.get_json()
     if not data:
+        log.error("Request body missing in CSR signing request")
         abort(400, description="Missing request body")
 
     csr = data.get("csr")
     if not csr:
+        log.error("Field 'csr' missing in CSR signing request")
         abort(400, description="Missing required field 'csr'")
     if not isinstance(csr, str):
+        log.error("Invalid data type for 'csr'")
         abort(400, description="Invalid data type for 'csr'")
 
     hwid = data.get("hardware-id")
     if not hwid:
+        log.error("Field 'hardware-id' missing in CSR signing request")
         abort(400, description="Missing required field 'hardware-id'")
 
     overrides = data.get("overrides") or {}
@@ -73,6 +91,7 @@ def sign_csr():
     name = data.get("name") or None
 
     if data.get("group"):
+        log.error("Field 'group' not supported in CSR signing request")
         # Since we run w/o any authentication, allowing devices to determine
         # their device group is too dangerous to allow by default. We instead
         # allow a server defined config, Settings.DEVICE_GROUP.
@@ -80,18 +99,21 @@ def sign_csr():
 
     try:
         fields = sign_device_csr(csr)
+        log.info("CSR successfully signed")
     except ValueError as e:
+        log.error("Error while signing CSR: %s", str(e))
         abort(400, description=str(e))
 
     if Settings.API_TOKEN_PATH:
         with open(Settings.API_TOKEN_PATH) as f:
             tok = f.read().strip()
             if tok:
-                app.logger.info("Creating in foundries with %s", fields.uuid)
+                log.info("Creating in foundries with %s", fields.uuid)
                 create_in_foundries(fields.client_crt, tok, name)
 
     log_device(fields.uuid, fields.pubkey)
 
+    log.info("CSR signing request successfully processed. Responding to client.")
     return (
         jsonify(
             {
