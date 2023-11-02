@@ -29,41 +29,60 @@ class Options(NamedTuple):
 
 
 def create_key(uuid: str, factory: str, production: bool) -> Tuple[bytes, bytes]:
-    key = subprocess.check_output(
-        ["openssl", "ecparam", "-genkey", "-name", "prime256v1"]
-    )
+    try:
+        log.info("Creating key for UUID: %s, Factory: %s", uuid, factory)
 
-    with NamedTemporaryFile() as cnf:
-        cnf.write(
-            f"""[req]
-prompt = no
-distinguished_name = dn
-req_extensions = ext
+        # Create a private key and store it in a temp file
+        with NamedTemporaryFile(delete=False, suffix=".pem") as keyfile:
+            key = subprocess.check_output(["openssl", "ecparam", "-genkey", "-name", "prime256v1"])
+            keyfile.write(key)
+            keyfile_path = keyfile.name
+            keyfile.flush()
 
-[dn]
-CN={uuid}
-OU={factory}
-""".encode()
-        )
-        if production:
-            cnf.write(b"businessCategory=production\n")
-        cnf.write(
-            b"""
-[ext]
-keyUsage=critical, digitalSignature
-extendedKeyUsage=critical, clientAuth
-"""
-        )
-        cnf.flush()
+        # Create a temp config for OpenSSL's CSR generation
+        with NamedTemporaryFile(delete=False) as cnf:
+            cnf.write(f"""[req]
+    prompt = no
+    distinguished_name = dn
+    req_extensions = ext
 
-        r = subprocess.run(
-            ["openssl", "req", "-new", "-config", cnf.name, "-key", "-"],
-            input=key,
-            stdout=subprocess.PIPE,
-        )
-        r.check_returncode()
+    [dn]
+    CN={uuid}
+    OU={factory}
+    """.encode()
+            )
+            if production:
+                cnf.write(b"businessCategory=production\n")
+            cnf.write(
+                b"""
+    [ext]
+    keyUsage=critical, digitalSignature
+    extendedKeyUsage=critical, clientAuth
+    """
+            )
+            cnf.flush()
+            cnf.close()
+
+            # Use OpenSSL to generate a CSR using the private key and config
+            r = subprocess.run(["openssl", "req", "-new", "-config", cnf.name, "-key", keyfile_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if r.returncode != 0:
+                log.error("Error in running openssl command:")
+                log.error(r.stderr.decode())
+
+                # Clean up temp files in case of errors
+                os.unlink(cnf.name)
+                os.unlink(keyfile_path)
+                raise subprocess.CalledProcessError(r.returncode, r.args)
+
+    except Exception as e:
+        log.error("An error occurred: %s", e)
+    finally:
+        # Let's ensure that temp files are deleted
+        os.unlink(cnf.name)
+        os.unlink(keyfile_path)
 
     return key, r.stdout
+
 
 
 def main(opts: Options):
