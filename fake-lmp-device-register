@@ -117,7 +117,10 @@ def main(opts: Options):
 
     r = requests.post(opts.registration_url, json=data)
     if r.status_code != 201:
-        sys.exit("ERROR: HTTP_%d: %s" % (r.status_code, r.text))
+        log.error("ERROR: HTTP_%d: %s", r.status_code, r.text)
+        sys.exit(1)
+    else:
+        log.debug("Successfully registered device with status code: %d", r.status_code)
 
     with open(os.path.join(opts.sota_dir, "pkey.pem"), "wb") as f:
         f.write(pkey)
