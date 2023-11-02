@@ -84,9 +84,19 @@ def create_key(uuid: str, factory: str, production: bool) -> Tuple[bytes, bytes]
     return key, r.stdout
 
 
-
 def main(opts: Options):
+    log.info("Starting main function with options: Factory=%s, SOTA Directory=%s", opts.factory, opts.sota_dir)
+
+    # Ensure the sota directory exists in the current dir
+    if not os.path.exists(opts.sota_dir):
+        os.makedirs(opts.sota_dir)
+
     pkey, csr = create_key(opts.uuid, opts.factory, opts.production)
+
+    # Save the private key into current-dir/var/sota/
+    with open(os.path.join(opts.sota_dir, "pkey.pem"), "wb") as f:
+        f.write(pkey)
+
     data = {
         "name": opts.name,
         "uuid": opts.uuid,
@@ -131,7 +141,7 @@ def get_parser() -> ArgumentParser:
         "--factory", "-f", required=True, help="Name of factory to register device in"
     )
     p.add_argument("--production", action="store_true", help="Make 'production' cert")
-    p.add_argument("--sota-dir", "-d", default="/var/sota", help="default=%(default)s")
+    p.add_argument("--sota-dir", "-d", default=os.path.join(os.getcwd(), "var", "sota"), help="default=%(default)s")
     p.add_argument("--tags", "-t", default="master", help="default=%(default)s")
     p.add_argument("--apps", "-a")
     p.add_argument(
