@@ -1,0 +1,112 @@
+name: Test Build and Call With Fake Register
+
+on: [push]
+
+jobs:
+  fakeRegister:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openssl
+
+      - name: Install Python Dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install requests
+
+      - name: Docker Build
+        run: |
+          ls -la
+          docker-compose build
+
+      - name: Create Dummy Certificates
+        run: |
+          mkdir -p ./data/certs
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ./data/certs/local-ca.key
+          openssl req -x509 -new -nodes -key ./data/certs/local-ca.key -sha256 -days 3650 -out ./data/certs/local-ca.pem -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com"
+          openssl req -x509 -new -nodes -key ./data/certs/local-ca.key -sha256 -days 3650 -out ./data/certs/factory_ca.pem -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com"
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ./data/certs/server.key
+          openssl req -new -key ./data/certs/server.key -out ./data/certs/server.csr -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com"
+          echo subjectAltName=DNS:www.example.com,DNS:example.org > ./data/certs/san.cnf
+          openssl x509 -req -in ./data/certs/server.csr -CA ./data/certs/local-ca.pem -CAkey ./data/certs/local-ca.key -CAcreateserial -out ./data/certs/tls-crt -days 365 -sha256 -extfile ./data/certs/san.cnf
+          rm -rf ./data/certs/server.key ./data/certs/server.csr ./data/certs/san.cnf
+          chmod +r ./data/certs/*   
+
+      - name: Run Docker Compose Up
+        run: |
+          docker-compose up --force-recreate --detach
+
+      - name: Verify call of the /sign endpoint
+        run: |
+          max_attempts=12
+          attempt=1
+          while [[ $attempt -le $max_attempts ]]
+          do
+            response=$(curl -X POST http://localhost:80/sign -o /dev/null -w '%{http_code}' || true)
+            echo "Attempt $attempt: Response code: $response"
+            if [[ "$response" -eq 400 ]]; then
+              echo "Expected 400 Bad Request error received."
+              exit 0
+            else
+              echo "Unexpected response code received: $response"
+              if [[ $attempt -eq $max_attempts ]]; then
+                echo "Maximum attempts reached without receiving expected response."
+                exit 1
+              fi
+              echo "Waiting for 3 seconds before next attempt..."
+              sleep 3
+            fi
+            ((attempt++))
+          done
+
+
+      - name: Call fake-lmp-device-register with invalid values
+        run: |
+          mkdir -p ./var/sota/
+          set +e
+            output=$(python3 fake-lmp-device-register --registration-url "http://localhost:80/sign" --factory fake-test-sample 2>&1)
+            exit_code=$?
+          set -e
+          if [ $exit_code -ne 0 ]; then
+            echo "Non-zero exit code: $exit_code"
+            if echo "$output" | grep -q '500 Internal Server Error'; then
+              echo "Expected 500 Internal Server Error when doing the request to https://api.foundries.io/ota/devices/ to register the device."
+            else
+              echo "Unexpected failure occurred."
+              exit 1
+            fi
+          fi
+          echo "Output:"
+          echo "$output"
+
+      - name: Check relative /var/sota directory and pkey.pem file
+        run: |
+          if [[ -d "var/sota" && -f "var/sota/pkey.pem" ]]; then
+            echo "Relative /var/sota directory exists and pkey.pem is present"
+          else
+            echo "Relative /var/sota directory or pkey.pem is missing"
+            exit 1
+          fi
+          ls -la var/sota/
+
+      - name: Output Docker Compose Logs
+        if: always()
+        run: |
+          echo "Docker Compose Logs:"
+          docker-compose logs
+
+      - name: Shutdown Docker Compose
+        if: always()
+        run: |
+          docker-compose ps
+          docker-compose down
