@@ -28,16 +28,19 @@ class Options(NamedTuple):
     production: bool
 
 
-def create_key(uuid: str, factory: str, production: bool) -> Tuple[bytes, bytes]:
+def create_key(uuid: str, factory: str, production: bool, sota_dir: str) -> Tuple[bytes, bytes]:
+    # Set path for the private key file
+    keyfile_path = os.path.join(sota_dir, "pkey.pem")
+
     try:
         log.info("Creating key for UUID: %s, Factory: %s", uuid, factory)
 
-        # Create a private key and store it in a temp file
-        with NamedTemporaryFile(delete=False, suffix=".pem") as keyfile:
-            key = subprocess.check_output(["openssl", "ecparam", "-genkey", "-name", "prime256v1"])
-            keyfile.write(key)
-            keyfile_path = keyfile.name
-            keyfile.flush()
+        # Generate a private key into current-dir/var/sota
+        subprocess.check_call(["openssl", "ecparam", "-genkey", "-name", "prime256v1", "-out", keyfile_path])
+
+        # Read the key from the file
+        with open(keyfile_path, "rb") as keyfile:
+            key_data = keyfile.read()
 
         # Create a temp config for OpenSSL's CSR generation
         with NamedTemporaryFile(delete=False) as cnf:
@@ -71,17 +74,16 @@ def create_key(uuid: str, factory: str, production: bool) -> Tuple[bytes, bytes]
 
                 # Clean up temp files in case of errors
                 os.unlink(cnf.name)
-                os.unlink(keyfile_path)
                 raise subprocess.CalledProcessError(r.returncode, r.args)
 
     except Exception as e:
         log.error("An error occurred: %s", e)
+        raise
     finally:
         # Let's ensure that temp files are deleted
         os.unlink(cnf.name)
-        os.unlink(keyfile_path)
 
-    return key, r.stdout
+    return key_data, r.stdout
 
 
 def main(opts: Options):
@@ -91,7 +93,7 @@ def main(opts: Options):
     if not os.path.exists(opts.sota_dir):
         os.makedirs(opts.sota_dir)
 
-    pkey, csr = create_key(opts.uuid, opts.factory, opts.production)
+    pkey, csr = create_key(opts.uuid, opts.factory, opts.production, opts.sota_dir)
 
     # Save the private key into current-dir/var/sota/
     with open(os.path.join(opts.sota_dir, "pkey.pem"), "wb") as f:
