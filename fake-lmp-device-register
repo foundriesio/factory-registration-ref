@@ -29,49 +29,63 @@ class Options(NamedTuple):
 
 
 def create_key(uuid: str, factory: str, production: bool, sota_dir: str) -> Tuple[bytes, bytes]:
-    log.info("Setting path for the private key file: %s", sota_dir)
-    keyfile_path = os.path.join(sota_dir, "pkey.pem")
+    try:
+        log.info("Setting path for the private key file: %s", sota_dir)
+        keyfile_path = os.path.join(sota_dir, "pkey.pem")
 
-    log.info("Creating key for UUID: %s, Factory: %s", uuid, factory)
-    subprocess.check_call(
-        ["openssl", "ecparam", "-genkey", "-name", "prime256v1", "-out", keyfile_path]
-    )
-
-    with open(keyfile_path, "rb") as keyfile:
-        key_data = keyfile.read()
-
-    log.info("Creating CSR for UUID: %s, Factory: %s", uuid, factory)
-    with NamedTemporaryFile() as cnf:
-        cnf.write(
-            f"""[req]
-prompt = no
-distinguished_name = dn
-req_extensions = ext
-
-[dn]
-CN={uuid}
-OU={factory}
-""".encode()
+        log.info("Creating key for UUID: %s, Factory: %s", uuid, factory)
+        subprocess.check_call(
+            ["openssl", "ecparam", "-genkey", "-name", "prime256v1", "-out", keyfile_path]
         )
-        if production:
-            cnf.write(b"businessCategory=production\n")
-        cnf.write(
-            b"""
-[ext]
-keyUsage=critical, digitalSignature
-extendedKeyUsage=critical, clientAuth
-"""
-        )
-        cnf.flush()
 
-        log.info("Running openssl req")
-        r = subprocess.run(
-            ["openssl", "req", "-new", "-config", cnf.name, "-key", keyfile_path],
-            input=key_data,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        r.check_returncode()
+        with open(keyfile_path, "rb") as keyfile:
+            key_data = keyfile.read()
+
+        log.info("Creating CSR for UUID: %s, Factory: %s", uuid, factory)
+        with NamedTemporaryFile() as cnf:
+            cnf.write(
+                f"""[req]
+    prompt = no
+    distinguished_name = dn
+    req_extensions = ext
+
+    [dn]
+    CN={uuid}
+    OU={factory}
+    """.encode()
+            )
+            if production:
+                cnf.write(b"businessCategory=production\n")
+            cnf.write(
+                b"""
+    [ext]
+    keyUsage=critical, digitalSignature
+    extendedKeyUsage=critical, clientAuth
+    """
+            )
+            cnf.flush()
+
+            log.info("Running openssl req")
+            r = subprocess.run(
+                ["openssl", "req", "-new", "-config", cnf.name, "-key", keyfile_path],
+                input=key_data,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            r.check_returncode()
+
+    except subprocess.CalledProcessError as e:
+        log.error("A subprocess error occurred: %s", e)
+        log.error("Command output: %s", e.output.decode())
+        raise
+
+    except FileNotFoundError as e:
+        log.error("File not found: %s", e)
+        raise
+
+    except PermissionError as e:
+        log.error("Permission denied: %s", e)
+        raise
 
     return key_data, r.stdout
 
