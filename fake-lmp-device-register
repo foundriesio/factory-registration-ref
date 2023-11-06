@@ -23,10 +23,15 @@ class Options(NamedTuple):
     production: bool
 
 
-def create_key(uuid: str, factory: str, production: bool) -> Tuple[bytes, bytes]:
-    key = subprocess.check_output(
-        ["openssl", "ecparam", "-genkey", "-name", "prime256v1"]
+def create_key(uuid: str, factory: str, production: bool, sota_dir: str) -> Tuple[bytes, bytes]:
+    keyfile_path = os.path.join(sota_dir, "pkey.pem")
+
+    subprocess.check_call(
+        ["openssl", "ecparam", "-genkey", "-name", "prime256v1", "-out", keyfile_path]
     )
+
+    with open(keyfile_path, "rb") as keyfile:
+        key_data = keyfile.read()
 
     with NamedTemporaryFile() as cnf:
         cnf.write(
@@ -52,17 +57,22 @@ extendedKeyUsage=critical, clientAuth
         cnf.flush()
 
         r = subprocess.run(
-            ["openssl", "req", "-new", "-config", cnf.name, "-key", "-"],
-            input=key,
+            ["openssl", "req", "-new", "-config", cnf.name, "-key", keyfile_path],
+            input=key_data,
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
         r.check_returncode()
 
-    return key, r.stdout
+    return key_data, r.stdout
 
 
 def main(opts: Options):
-    pkey, csr = create_key(opts.uuid, opts.factory, opts.production)
+    pkey, csr = create_key(opts.uuid, opts.factory, opts.production, opts.sota_dir)
+
+    with open(os.path.join(opts.sota_dir, "pkey.pem"), "wb") as f:
+        f.write(pkey)
+
     data = {
         "name": opts.name,
         "uuid": opts.uuid,
