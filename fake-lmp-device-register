@@ -9,6 +9,11 @@ from typing import NamedTuple, Tuple
 from uuid import uuid4
 
 import requests
+import logging
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.DEBUG)
+log = logging.getLogger(__name__)
 
 
 class Options(NamedTuple):
@@ -24,8 +29,10 @@ class Options(NamedTuple):
 
 
 def create_key(uuid: str, factory: str, production: bool, sota_dir: str) -> Tuple[bytes, bytes]:
+    log.info("Setting path for the private key file: %s", sota_dir)
     keyfile_path = os.path.join(sota_dir, "pkey.pem")
 
+    log.info("Creating key for UUID: %s, Factory: %s", uuid, factory)
     subprocess.check_call(
         ["openssl", "ecparam", "-genkey", "-name", "prime256v1", "-out", keyfile_path]
     )
@@ -33,6 +40,7 @@ def create_key(uuid: str, factory: str, production: bool, sota_dir: str) -> Tupl
     with open(keyfile_path, "rb") as keyfile:
         key_data = keyfile.read()
 
+    log.info("Creating CSR for UUID: %s, Factory: %s", uuid, factory)
     with NamedTemporaryFile() as cnf:
         cnf.write(
             f"""[req]
@@ -56,6 +64,7 @@ extendedKeyUsage=critical, clientAuth
         )
         cnf.flush()
 
+        log.info("Running openssl req")
         r = subprocess.run(
             ["openssl", "req", "-new", "-config", cnf.name, "-key", keyfile_path],
             input=key_data,
@@ -69,8 +78,10 @@ extendedKeyUsage=critical, clientAuth
 
 def main(opts: Options):
     if not os.path.exists(opts.sota_dir):
+        log.info("Creating sota directory: %s", opts.sota_dir)
         os.makedirs(opts.sota_dir)
 
+    log.info("Creating key and CSR")
     pkey, csr = create_key(opts.uuid, opts.factory, opts.production, opts.sota_dir)
 
     with open(os.path.join(opts.sota_dir, "pkey.pem"), "wb") as f:
@@ -94,9 +105,13 @@ def main(opts: Options):
     if opts.apps:
         data["overrides"]["pacman"]["compose_apps"] = '"' + opts.apps + '"'  # type: ignore
 
+    log.info("Registering device")
     r = requests.post(opts.registration_url, json=data)
     if r.status_code != 201:
-        sys.exit("ERROR: HTTP_%d: %s" % (r.status_code, r.text))
+        log.error("ERROR: HTTP_%d: %s", r.status_code, r.text)
+        sys.exit(1)
+    else:
+        log.debug("Successfully registered device with status code: %d", r.status_code)
 
     with open(os.path.join(opts.sota_dir, "pkey.pem"), "wb") as f:
         f.write(pkey)
