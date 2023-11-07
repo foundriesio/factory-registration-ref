@@ -37,7 +37,8 @@ jobs:
           openssl ecparam -name prime256v1 -genkey -noout -out ./data/certs/factory_ca.key
           openssl req -x509 -new -key ./data/certs/factory_ca.key -sha256 -days 3650 -out ./data/certs/factory_ca.pem -subj "/C=US/ST=Denial/L=Springfield/O=Dis/OU=fake-test-sample/CN=Factory-CA"
           openssl ecparam -name prime256v1 -genkey -noout -out ./data/certs/server.key
-          openssl req -new -key ./data/certs/server.key -out ./data/certs/server.csr -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com"
+          echo subjectAltName=DNS:www.example.com,DNS:example.org > ./data/certs/san.cnf
+          openssl req -new -key ./data/certs/server.key -out ./data/certs/server.csr -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=Factory-CA"
           openssl x509 -req -in ./data/certs/server.csr -CA ./data/certs/local-ca.pem -CAkey ./data/certs/local-ca.key -CAcreateserial -out ./data/certs/tls-crt -days 365 -sha256 -extfile ./data/certs/san.cnf
           rm -rf ./data/certs/server.key ./data/certs/server.csr ./data/certs/san.cnf
           chmod +r ./data/certs/*
