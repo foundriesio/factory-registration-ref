@@ -61,4 +61,4 @@ To register a device, run as root from LmP device:
 
 # Testing/Troubleshooting
 This project includes a simple `fake-lmp-device-register` that can be used
-to quickly test this project's API.
+to quickly test this project's API. [(More info)](./contrib/fake-register.md)
