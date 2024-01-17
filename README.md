@@ -56,8 +56,18 @@ To register a device, run as root from LmP device:
  $ DEVICE_API=http://<IP of docker-compose host>/sign lmp-device-register [-T <TOKEN>] [-f <factory>]
 ~~~
 
-**NOTE** If you're emulating the device with QEMU, by default the gateway (host) IP is `10.0.2.2`.
+**NOTES** 
+- If you're emulating the device with QEMU, by default the gateway (host) IP is `10.0.2.2`.
 (i.e. `sudo DEVICE_API=http://10.0.2.2:80/sign lmp-device-register [-T <TOKEN>] [-f <factory>]`)
+- If you are using a MEDs instance, update the PKI request implementation in `registration_ref/app.py` to target the correct domain such as follows:
+```python
+    r = requests.put(
+        "https://api.<dns_name>/ota/devices/",
+        headers=headers,
+        json=data,
+        # verify=False  ## If you are using staging-certs=true, add this line to skip SSL verification.
+    )
+```
 
 # Testing/Troubleshooting
 This project includes a simple `fake-lmp-device-register` that can be used
