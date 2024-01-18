@@ -57,3 +57,13 @@ class Settings:
         if p and os.path.isfile(p):
             return p
         return None
+
+    @class_property  # type: ignore
+    @staticmethod
+    def DEVICE_REGISTRATION_API() -> str:
+        return os.getenv('DEVICE_REGISTRATION_API', 'https://foundries.io/ota/devices/')
+
+    @class_property  # type: ignore
+    @staticmethod
+    def VERIFY_SSL() -> bool:
+        return os.getenv("VERIFY_SSL", "true").lower() in ("true", "1", "yes", "y")

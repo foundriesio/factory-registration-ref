@@ -47,7 +47,10 @@ def create_in_foundries(client_cert: str, api_token: str, name: Optional[str] = 
     }
     for x in (0.1, 0.2, 1, 0):
         r = requests.put(
-            "https://api.foundries.io/ota/devices/", headers=headers, json=data
+            Settings.DEVICE_REGISTRATION_API,
+            headers=headers,
+            json=data,
+            verify=Settings.VERIFY_SSL
         )
         if r.status_code == 409:
             log.error("Device creation conflict detected: %s", r.text)
