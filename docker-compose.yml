@@ -9,6 +9,8 @@ services:
       FIO_API_TOKEN: /fio-api-token
       # if FIO_API_TOKEN is provided, assign devices to a device-group
       DEVICE_GROUP: ${DEVICE_GROUP-}
+      DEVICE_REGISTRATION_API: ${DEVICE_REGISTRATION_API-https://api.foundries.io/ota/devices/}
+      VERIFY_SSL: ${VERIFY_SSL-True}
     volumes:
       - ${DATA_DIR-./data}/devices:/devices
       - ${DATA_DIR-./data}/certs:/certs:ro

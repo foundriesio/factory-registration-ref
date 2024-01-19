@@ -46,6 +46,15 @@ that a device's first boot will include the proper configuration:
   # echo <TOKEN> > ./data/fio-api-token
 ~~~
 
+If you are using a Foundries domain which is not app.foundries.io, (i.e. MEDs), then
+ensure that you configure accordingly the URL used for your domain:
+
+```shell
+export DEVICE_REGISTRATION_API=https://api.<dns-domain>/ota/devices/
+```
+
+**NOTE** If you want to skip the SSL verification, also use `export VERIFY_SSL=False`.
+
 You can now run this API with:
 ~~~
  $ docker-compose up
