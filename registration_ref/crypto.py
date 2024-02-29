@@ -85,6 +85,10 @@ def sign_device_csr(csr: str) -> DeviceInfo:
             x509.ExtendedKeyUsage([x509.ExtendedKeyUsageOID.CLIENT_AUTH]),
             critical=True,
         )
+        .add_extension(
+            x509.AuthorityKeyIdentifier.from_issuer_public_key(pk.public_key()),
+            critical=False,
+        )
         .sign(pk, SHA256(), default_backend())
     )
     signed_bytes = signed.public_bytes(encoding=Encoding.PEM)
