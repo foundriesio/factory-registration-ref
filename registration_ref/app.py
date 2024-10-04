@@ -121,7 +121,6 @@ def sign_csr():
                 create_in_foundries(fields.client_crt, tok, name)
 
     log_device(fields.uuid, fields.pubkey)
-
     log.info("CSR signing request successfully processed. Responding to client.")
     return (
         jsonify(

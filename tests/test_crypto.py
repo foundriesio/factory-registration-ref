@@ -110,7 +110,7 @@ class TestCrypo(TestCase):
     def test_bad_csr_format(self):
         with self.assertRaises(ValueError) as e:
             sign_device_csr("not a valid csr")
-        self.assertIn("Unable to load request.", str(e.exception))
+        self.assertIn("Unable to load PEM file.", str(e.exception))
 
     def test_invalid_factory(self):
         key = ec.generate_private_key(ec.SECP256R1(), default_backend())
