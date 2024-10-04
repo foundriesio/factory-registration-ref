@@ -54,12 +54,19 @@ def sign_device_csr(csr: str) -> DeviceInfo:
     factory = cert.subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME)[
         0
     ].value
+    if isinstance(factory, bytes):
+        factory = factory.decode()
     uuid = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+    if isinstance(uuid, bytes):
+        uuid = uuid.decode()
 
     pk, ca = _key_pair()
     actual_factory = ca.subject.get_attributes_for_oid(
         NameOID.ORGANIZATIONAL_UNIT_NAME
     )[0].value
+    if isinstance(actual_factory, bytes):
+        actual_factory = actual_factory.decode()
+
     if factory != actual_factory:
         raise ValueError(f"Invalid factory({factory}) must be {actual_factory}")
 

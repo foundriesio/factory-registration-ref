@@ -64,7 +64,7 @@ def create_in_foundries(client_cert: str, api_token: str, name: Optional[str] = 
             sleep(x)
         else:
             log.error("Failed to create device after retries. Aborting!")
-            abort(500, description=msg)
+            abort(500, description=r.text)
 
 
 @app.route("/sign", methods=["POST"])
