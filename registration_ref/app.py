@@ -11,8 +11,9 @@ from registration_ref.settings import Settings
 
 import logging
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.DEBUG)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG
+)
 log = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -29,6 +30,7 @@ def _auth_user():
     log.debug("Received request from client IP: %s", request.remote_addr)
     # Add further authentication checks and log if required
     pass
+
 
 def log_device(uuid: str, pubkey: str):
     # Keep a log of created devices
@@ -56,7 +58,7 @@ def create_in_foundries(client_cert: str, api_token: str, name: Optional[str] = 
             Settings.DEVICE_REGISTRATION_API,
             headers=headers,
             json=data,
-            verify=Settings.VERIFY_SSL
+            verify=Settings.VERIFY_SSL,
         )
         if r.status_code == 409:
             log.error("Device creation conflict detected: %s", r.text)
@@ -64,7 +66,9 @@ def create_in_foundries(client_cert: str, api_token: str, name: Optional[str] = 
         if r.ok:
             log.info("Device successfully created in foundries")
             return
-        log.error("Unable to create device on server: HTTP_%s - %s", r.status_code, r.text)
+        log.error(
+            "Unable to create device on server: HTTP_%s - %s", r.status_code, r.text
+        )
         if x:
             log.info("Retrying device creation in %ds", x)
             sleep(x)

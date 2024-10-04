@@ -53,7 +53,9 @@ class TestApi(TestCase):
                 settings.DEVICES_DIR = d
                 settings.API_TOKEN_PATH = None
                 settings.CA_CRT = "cacrt"
-                r = self._sign({"csr": "n/a", "hardware-id": "foo", "overrides": overrides})
+                r = self._sign(
+                    {"csr": "n/a", "hardware-id": "foo", "overrides": overrides}
+                )
                 with open(os.path.join(d, "uuid")) as f:
                     self.assertEqual("pub", f.read())
         self.assertEqual(201, r.status_code, r.data)
