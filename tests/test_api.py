@@ -18,7 +18,7 @@ class TestApi(TestCase):
 
     def test_no_data(self):
         """Fail properly when no data is sent"""
-        r = self.client.post("/sign")
+        r = self._sign(None)
         self.assertEqual(400, r.status_code, r.data)
         self.assertIn(b"Missing request body", r.data)
 
@@ -26,10 +26,17 @@ class TestApi(TestCase):
         """Fail properly if no csr is provided"""
         r = self._sign({"data": 12})
         self.assertEqual(400, r.status_code, r.data)
-        self.assertIn(b"Missing required field 'csr'", r.data)
+        self.assertIn(b"Missing required field &#39;csr&#39;", r.data)
+
+    def test_no_hardware_id(self):
+        """Fail properly when no hardware-id is provided"""
+        r = self._sign({"csr": "valid csr"})
+        self.assertEqual(400, r.status_code, r.data)
+        self.assertIn(b"Missing required field &#39;hardware-id&#39;", r.data)
 
     def test_invalid_csr(self):
-        r = self._sign({"csr": "not a valid csr"})
+        """Fail properly when an invalid csr is provided"""
+        r = self._sign({"csr": "not a valid csr", "hardware-id": "foo"})
         self.assertEqual(400, r.status_code, r.data)
         self.assertIn(b"Unable to load request", r.data)
 
