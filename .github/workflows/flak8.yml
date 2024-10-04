@@ -1,0 +1,26 @@
+name: Lint
+
+on:
+  pull_request:
+
+jobs:
+  flake8:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt.pinned
+          pip install flake8==7.1.1
+
+      - name: Run Linter
+        run: |
+          flake8 ./registration_ref ./tests

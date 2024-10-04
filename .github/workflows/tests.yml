@@ -1,0 +1,21 @@
+name: Run Tests
+
+on:
+  pull_request:
+
+jobs:
+  dev-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build container
+        run: docker build -t foo .
+      
+      - name: Run tests in container
+        run: docker run -v `pwd`:`pwd` -w `pwd` foo python3 -m unittest discover
