@@ -2,7 +2,7 @@ import os
 from time import sleep
 from typing import Optional
 
-from flask import Flask, abort, jsonify, request
+from flask import Flask, abort as fabort, jsonify, make_response, request
 import requests
 
 from registration_ref.crypto import sign_device_csr
@@ -16,6 +16,12 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 log = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+
+def abort(status_code, description):
+    response = make_response(description)
+    response.status_code = status_code
+    fabort(response)
 
 
 @app.before_request
