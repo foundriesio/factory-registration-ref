@@ -19,8 +19,7 @@ class TestApi(TestCase):
     def test_no_data(self):
         """Fail properly when no data is sent"""
         r = self.client.post("/sign")
-        self.assertEqual(400, r.status_code, r.data)
-        self.assertIn(b"Missing request body", r.data)
+        self.assertEqual(415, r.status_code, r.data)
 
     def test_no_csr(self):
         """Fail properly if no csr is provided"""
@@ -29,9 +28,9 @@ class TestApi(TestCase):
         self.assertIn(b"Missing required field 'csr'", r.data)
 
     def test_invalid_csr(self):
-        r = self._sign({"csr": "not a valid csr"})
+        r = self._sign({"csr": "not a valid csr", "hardware-id": "atari"})
         self.assertEqual(400, r.status_code, r.data)
-        self.assertIn(b"Unable to load request", r.data)
+        self.assertIn(b"Unable to load PEM file", r.data)
 
     @patch("registration_ref.app.sign_device_csr")
     @patch("registration_ref.settings._env")
@@ -53,7 +52,10 @@ class TestApi(TestCase):
             with patch("registration_ref.app.Settings") as settings:
                 settings.DEVICES_DIR = d
                 settings.API_TOKEN_PATH = None
-                r = self._sign({"csr": "n/a", "overrides": overrides})
+                settings.CA_CRT = "cacrt"
+                r = self._sign(
+                    {"csr": "n/a", "hardware-id": "foo", "overrides": overrides}
+                )
                 with open(os.path.join(d, "uuid")) as f:
                     self.assertEqual("pub", f.read())
         self.assertEqual(201, r.status_code, r.data)

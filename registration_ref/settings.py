@@ -61,7 +61,7 @@ class Settings:
     @class_property  # type: ignore
     @staticmethod
     def DEVICE_REGISTRATION_API() -> str:
-        return os.getenv('DEVICE_REGISTRATION_API', 'https://foundries.io/ota/devices/')
+        return os.getenv("DEVICE_REGISTRATION_API", "https://foundries.io/ota/devices/")
 
     @class_property  # type: ignore
     @staticmethod
