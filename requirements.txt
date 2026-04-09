@@ -5,3 +5,4 @@ flask_testing
 gunicorn
 mypy
 requests
+types-requests
