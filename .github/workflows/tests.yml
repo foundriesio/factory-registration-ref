@@ -16,6 +16,6 @@ jobs:
 
       - name: Build container
         run: docker build -t foo .
-      
+
       - name: Run tests in container
-        run: docker run -v `pwd`:`pwd` -w `pwd` foo python3 -m unittest discover
+        run: docker run -v `pwd`:`pwd` -w `pwd` --entrypoint python3 foo -m unittest discover
