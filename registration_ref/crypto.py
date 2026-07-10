@@ -2,7 +2,6 @@ import datetime
 from typing import NamedTuple, Tuple
 
 from cryptography import x509
-from cryptography.x509.oid import NameOID  # type: ignore
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 from cryptography.hazmat.primitives.hashes import SHA256
@@ -13,9 +12,10 @@ from cryptography.hazmat.primitives.serialization import (
 )
 from cryptography.x509 import (
     Certificate,
-    load_pem_x509_csr,
     load_pem_x509_certificate,
+    load_pem_x509_csr,
 )
+from cryptography.x509.oid import NameOID  # type: ignore
 
 from registration_ref.settings import Settings
 
@@ -76,8 +76,10 @@ def sign_device_csr(csr: str) -> DeviceInfo:
         .serial_number(int("0x" + uuid.replace("-", ""), 16))
         .issuer_name(ca.subject)
         .public_key(cert.public_key())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=7300))
+        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_after(
+            datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7300)
+        )
         .add_extension(
             x509.KeyUsage(
                 digital_signature=True,

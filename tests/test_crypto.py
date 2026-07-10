@@ -41,9 +41,10 @@ class TestCrypo(TestCase):
             .issuer_name(issuer)
             .public_key(key.public_key())
             .serial_number(x509.random_serial_number())
-            .not_valid_before(datetime.datetime.utcnow())
+            .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
             .not_valid_after(
-                datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
+                datetime.datetime.now(datetime.timezone.utc)
+                + datetime.timedelta(minutes=10)
             )
             .add_extension(
                 x509.KeyUsage(
